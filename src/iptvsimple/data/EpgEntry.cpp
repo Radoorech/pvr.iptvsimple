@@ -27,6 +27,7 @@ void EpgEntry::UpdateTo(kodi::addon::PVREPGTag& left, int iChannelUid, int timeS
 {
   left.SetUniqueBroadcastId(m_broadcastId);
   left.SetTitle(m_title);
+  left.SetOriginalTitle(m_originalTitle);
   left.SetUniqueChannelId(iChannelUid);
   left.SetStartTime(m_startTime + timeShift);
   left.SetEndTime(m_endTime + timeShift);
@@ -218,6 +219,7 @@ bool EpgEntry::UpdateFrom(const xml_node& programmeNode, const std::string& id,
   m_seasonNumber = EPG_TAG_INVALID_SERIES_EPISODE;
 
   m_title = GetNodeValue(programmeNode, "title");
+  m_originalTitle = GetNodeValue(programmeNode, "orig-title");
   m_plot = GetNodeValue(programmeNode, "desc");
   m_episodeName = GetNodeValue(programmeNode, "sub-title");
 
