@@ -46,6 +46,9 @@ namespace iptvsimple
 
       const std::string& GetTitle() const { return m_title; }
       void SetTitle(const std::string& value) { m_title = value; }
+      
+      const std::string& GetOriginalTitle() const { return m_originalTitle; }
+      void SetOriginalTitle(const std::string& value) { m_originalTitle = value; }
 
       const std::string& GetEpisodeName() const { return m_episodeName; }
       void SetEpisodeName(const std::string& value) { m_episodeName = value; }
@@ -99,6 +102,7 @@ namespace iptvsimple
 
       std::string m_firstAired;
       std::string m_title;
+      std::string m_originalTitle;
       std::string m_episodeName;
       std::string m_plotOutline;
       std::string m_plot;
