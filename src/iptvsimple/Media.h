@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "ChannelGroups.h"
 #include "data/MediaEntry.h"
 
 #include <string>
@@ -19,14 +20,14 @@ namespace iptvsimple
   class ATTR_DLL_LOCAL Media
   {
   public:
-    Media();
+    Media(std::shared_ptr<iptvsimple::InstanceSettings>& settings);
     void GetMedia(std::vector<kodi::addon::PVRRecording>& kodiRecordings);
     int GetNumMedia() const;
     void Clear();
     const std::string GetMediaEntryURL(const kodi::addon::PVRRecording& mediaEntry);
     const iptvsimple::data::MediaEntry* FindMediaEntry(const std::string& id, const std::string& displayName) const;
 
-    bool AddMediaEntry(iptvsimple::data::MediaEntry& entry);
+    bool AddMediaEntry(iptvsimple::data::MediaEntry& entry, std::vector<int>& groupIdList, iptvsimple::ChannelGroups& channelGroups, bool channelHadGroups);
 
     std::vector<iptvsimple::data::MediaEntry>& GetMediaEntryList() { return m_media; }
 
@@ -38,5 +39,7 @@ namespace iptvsimple
     std::unordered_map<std::string, iptvsimple::data::MediaEntry> m_mediaIdMap;
 
     bool m_haveMediaTypes = false;
+
+    std::shared_ptr<iptvsimple::InstanceSettings> m_settings;
   };
 } //namespace iptvsimple

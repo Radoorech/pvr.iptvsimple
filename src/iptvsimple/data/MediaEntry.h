@@ -23,6 +23,11 @@ namespace iptvsimple
     class ATTR_DLL_LOCAL MediaEntry : public BaseEntry
     {
     public:
+      MediaEntry(std::shared_ptr<iptvsimple::InstanceSettings> settings)
+      {
+        m_settings = settings;
+      };
+
       const std::string& GetMediaEntryId() const { return m_mediaEntryId; }
       void SetMediaEntryId(const std::string& value) { m_mediaEntryId = value; }
 
@@ -57,7 +62,7 @@ namespace iptvsimple
       void SetProviderUniqueId(int value) { m_providerUniqueId = value; }
 
       const std::string& GetDirectory() const { return m_directory; }
-      void SetDirectory(const std::string& value) { m_directory = value; }
+      void SetDirectory(const std::string& value);
 
       int64_t GetSizeInBytes() const { return m_sizeInBytes; }
       void SetSizeInBytes(int64_t value) { m_sizeInBytes = value; }

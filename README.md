@@ -6,7 +6,9 @@
 
 # IPTV Simple PVR
 
-IPTV Live TV and Radio PVR client addon for [Kodi](https://kodi.tv) with support for both Gzip and XZ compression of XMLTV. Supports catchup/archive streams if supported by the IPTV provider as well as streams from Kodi video add-ons.
+IPTV Live TV and Radio PVR client addon for [Kodi](https://kodi.tv) with support for both Gzip and XZ compression of XMLTV. Multiple pairs of M3U/XML files are supported via Kodi PVR since Kodi 20 (Nexus). Supports catchup/archive streams if supported by the IPTV provider as well as streams from Kodi video add-ons.
+
+To use multiple pairs of M3U/XML files simply visit the add-ons settings under `Configure`, and choose new `Add add-on configuration`.
 
 IPTV Simple will play back videos and streams using a number of different inputstreams. The options available, such as pause/resume, seeking, timshifting etc. will depend on both the provider of the streams and the inputstream used. For video on demand stream seeking will be enabled within the duration of the video regardless of the inputstream used. The differences occur with the playback of live and catchup streams.
 
@@ -145,6 +147,7 @@ For settings related to genres please see the next section.
 * **Cache XMLTV at local storage**: If location is `Remote path` select whether or not the the XMLTV file should be cached locally.
 * **EPG time shift**: Adjust the EPG times by this value, from -12 hours to +14 hours.
 * **Apply time shift to all channels**: Whether or not to override the time shift for all channels with `EPG time shift`. If not enabled `EPG time shift` plus the individual time shift per channel (if available) will be used.
+* **Ignore Case for EPG Channel IDs**: Ignore Case for EPG Channel IDs, also known as tvg-id's, when matching channels to EPG entries. If disabled, only case senitive matching will be used.
 
 #### Genres
 Settings related to genres.
@@ -185,6 +188,11 @@ More detail on these can be found in [Supported M3U and XMLTV elements](#support
 * **Group entries by title**: If multiple entries exist with matching titles, create a virtual folder to group them together.
 * **Group entries by season**: If multiple entries exist with matching titles, try additionally grouping them in sub-folders representing seasons.
 * **Include season and episode number in title**: Prepend the season and episode numbers to the title.
+* **Use M3U Group name in path**: Select how to use the M3U group title in the path. Note that it will only be used if a single group name is provided. The options are:
+    - `Never` - Never use it.
+    - `Always append` - Always append it.
+    - `When no media-dir is present` - Only use the group title of the M3U when no media-dir is provided.
+* **Force all M3U entries to be media**: Force the full playlist to be media, regardless of what tags are present. Since the introduction of multiple instances for PVR add-ons this option can be useful.
 * **Include VODs as media**: Show VOD as recordings if enabled. If disabled only M3U entries with media attributes will be shown as PVR recordings.
 
 ### Timeshift
