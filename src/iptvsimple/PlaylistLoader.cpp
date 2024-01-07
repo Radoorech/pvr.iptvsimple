@@ -38,6 +38,33 @@ bool PlaylistLoader::Init()
   return true;
 }
 
+namespace {
+
+bool GetOverrideRealTime(std::string& line)
+{
+  size_t realtimeIndex = line.find(REALTIME_OVERRIDE);
+  if (realtimeIndex != std::string::npos)
+  {
+    size_t startValueIndex = realtimeIndex + REALTIME_OVERRIDE.length();
+    size_t endQuoteIndex = line.find('"', startValueIndex);
+    if (endQuoteIndex != std::string::npos)
+    {
+      size_t valueLength = endQuoteIndex - startValueIndex;
+      std::string value = line.substr(startValueIndex, valueLength);
+      StringUtils::ToLower(value);
+      // The only value that matters is if the 'realtime' specifier is 'false'
+      // that means we want to override the realtime value but not treat the stream
+      // like media/VOD in the UI
+      // It's a bit confusing, but hey, that's Kodi for you ;)
+      return value == "false";
+    }
+  }
+
+  return false;
+}
+
+}
+
 bool PlaylistLoader::LoadPlayList()
 {
   auto started = std::chrono::high_resolution_clock::now();
@@ -64,12 +91,14 @@ bool PlaylistLoader::LoadPlayList()
   /* load channels */
   bool isFirstLine = true;
   bool isRealTime = true;
+  bool overrideRealTime = false;
   bool isMediaEntry = false;
   int epgTimeShift = 0;
   int catchupCorrectionSecs = m_settings->GetCatchupCorrectionSecs();
   std::vector<int> currentChannelGroupIdList;
   bool channelHadGroups = false;
   bool xeevCatchup = false;
+  bool groupsFromBeginDirective = false; //From EXTGRP begin directive
 
   Channel tmpChannel{m_settings};
   MediaEntry tmpMediaEntry{m_settings};
@@ -142,18 +171,20 @@ bool PlaylistLoader::LoadPlayList()
     if (StringUtils::StartsWith(line, M3U_INFO_MARKER)) //#EXTINF
     {
       tmpChannel.SetChannelNumber(m_channels.GetCurrentChannelNumber());
-      currentChannelGroupIdList.clear();
 
       isMediaEntry = line.find(MEDIA) != std::string::npos ||
                      line.find(MEDIA_DIR) != std::string::npos ||
                      line.find(MEDIA_SIZE) != std::string::npos ||
                      m_settings->MediaForcePlaylist();
 
-      const std::string groupNamesListString = ParseIntoChannel(line, tmpChannel, tmpMediaEntry, currentChannelGroupIdList, epgTimeShift, catchupCorrectionSecs, xeevCatchup);
+      overrideRealTime = GetOverrideRealTime(line);
+
+      const std::string groupNamesListString = ParseIntoChannel(line, tmpChannel, tmpMediaEntry, epgTimeShift, catchupCorrectionSecs, xeevCatchup);
 
       if (!groupNamesListString.empty())
       {
         ParseAndAddChannelGroups(groupNamesListString, currentChannelGroupIdList, tmpChannel.IsRadio());
+        groupsFromBeginDirective = false;
         channelHadGroups = true;
       }
     }
@@ -171,10 +202,15 @@ bool PlaylistLoader::LoadPlayList()
     }
     else if (StringUtils::StartsWith(line, M3U_GROUP_MARKER)) //#EXTGRP:
     {
+      //Clear any previous Group Ids
+      currentChannelGroupIdList.clear();
+      groupsFromBeginDirective = false;
+
       const std::string groupNamesListString = ReadMarkerValue(line, M3U_GROUP_MARKER);
       if (!groupNamesListString.empty())
       {
         ParseAndAddChannelGroups(groupNamesListString, currentChannelGroupIdList, tmpChannel.IsRadio());
+        groupsFromBeginDirective = true;
         channelHadGroups = true;
       }
     }
@@ -185,20 +221,10 @@ bool PlaylistLoader::LoadPlayList()
     }
     else if (line[0] != '#')
     {
-      Logger::Log(LEVEL_DEBUG, "%s - Adding channel '%s' with URL: '%s'", __FUNCTION__, tmpChannel.GetChannelName().c_str(), line.c_str());
+      Logger::Log(LEVEL_DEBUG, "%s - Adding channel or Media Entry '%s' with URL: '%s'", __FUNCTION__, tmpChannel.GetChannelName().c_str(), line.c_str());
 
-      if ((isRealTime || !m_settings->IsMediaEnabled() || !m_settings->ShowVodAsRecordings()) && !isMediaEntry)
-      {
-        tmpChannel.AddProperty(PVR_STREAM_PROPERTY_ISREALTIMESTREAM, "true");
-
-        Channel channel = tmpChannel;
-        channel.SetStreamURL(line);
-        channel.ConfigureCatchupMode();
-
-        if (!m_channels.AddChannel(channel, currentChannelGroupIdList, m_channelGroups, channelHadGroups))
-          Logger::Log(LEVEL_DEBUG, "%s - Not adding channel '%s' as only channels with groups are supported for %s channels per add-on settings", __func__, tmpChannel.GetChannelName().c_str(), channel.IsRadio() ? "radio" : "tv");
-      }
-      else // We have media
+      if (m_settings->IsMediaEnabled() &&
+          (isMediaEntry || (m_settings->ShowVodAsRecordings() && !isRealTime)))
       {
         MediaEntry entry = tmpMediaEntry;
         entry.UpdateFrom(tmpChannel);
@@ -206,14 +232,34 @@ bool PlaylistLoader::LoadPlayList()
 
         if (!m_media.AddMediaEntry(entry, currentChannelGroupIdList, m_channelGroups, channelHadGroups))
           Logger::Log(LEVEL_DEBUG, "%s - Counld not add media entry as an entry with the same gnenerated unique ID already exists", __func__);
+      }
+      else
+      {
+        // There are cases where we want the stream to be represetned as a channel with live streaming disabled
+        // to allow features such as passthrough to work. We don't want this to be VOD as then it would be treated like media.
+        if (!overrideRealTime)
+          tmpChannel.AddProperty(PVR_STREAM_PROPERTY_ISREALTIMESTREAM, "true");
+
+        Channel channel = tmpChannel;
+        channel.SetStreamURL(line);
+        channel.ConfigureCatchupMode();
+
+        if (!m_channels.AddChannel(channel, currentChannelGroupIdList, m_channelGroups, channelHadGroups))
+          Logger::Log(LEVEL_DEBUG, "%s - Not adding channel '%s' as only channels with groups are supported for %s channels per add-on settings", __func__, tmpChannel.GetChannelName().c_str(), channel.IsRadio() ? "radio" : "tv");
 
       }
 
       tmpChannel.Reset();
       tmpMediaEntry.Reset();
       isRealTime = true;
+      overrideRealTime = false;
       isMediaEntry = false;
       channelHadGroups = false;
+
+      // We want to clear the groups if they came from a 'group-title' tag from a channel
+      // But if it's from an EXTGRP tag we don't as that's a begin directive.
+      if (!groupsFromBeginDirective)
+        currentChannelGroupIdList.clear();
     }
   }
 
@@ -242,7 +288,7 @@ bool PlaylistLoader::LoadPlayList()
   return true;
 }
 
-std::string PlaylistLoader::ParseIntoChannel(const std::string& line, Channel& channel, MediaEntry& mediaEntry, std::vector<int>& groupIdList, int epgTimeShift, int catchupCorrectionSecs, bool xeevCatchup)
+std::string PlaylistLoader::ParseIntoChannel(const std::string& line, Channel& channel, MediaEntry& mediaEntry, int epgTimeShift, int catchupCorrectionSecs, bool xeevCatchup)
 {
   size_t colonIndex = line.find(':');
   size_t commaIndex = line.rfind(','); //default to last comma on line in case we don't find a better match
@@ -535,7 +581,7 @@ void PlaylistLoader::ParseSinglePropertyIntoChannel(const std::string& line, Cha
   }
 }
 
-bool PlaylistLoader::ReloadPlayList()
+void PlaylistLoader::ReloadPlayList()
 {
   m_m3uLocation = m_settings->GetM3ULocation();
 
@@ -550,15 +596,11 @@ bool PlaylistLoader::ReloadPlayList()
     m_client->TriggerChannelGroupsUpdate();
     m_client->TriggerProvidersUpdate();
     m_client->TriggerRecordingUpdate();
-
-    return true;
   }
   else
   {
     m_channels.ChannelsLoadFailed();
     m_channelGroups.ChannelGroupsLoadFailed();
-
-    return false;
   }
 }
 

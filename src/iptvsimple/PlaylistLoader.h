@@ -48,6 +48,7 @@ namespace iptvsimple
   static const std::string MEDIA                   = "media=";
   static const std::string MEDIA_DIR               = "media-dir=";
   static const std::string MEDIA_SIZE              = "media-size=";
+  static const std::string REALTIME_OVERRIDE       = "realtime=\"";
   static const std::string KODIPROP_MARKER         = "#KODIPROP:";
   static const std::string EXTVLCOPT_MARKER        = "#EXTVLCOPT:";
   static const std::string EXTVLCOPT_DASH_MARKER   = "#EXTVLCOPT--";
@@ -71,13 +72,13 @@ namespace iptvsimple
     bool Init();
 
     bool LoadPlayList();
-    bool ReloadPlayList();
+    void ReloadPlayList();
 
   private:
     static std::string ReadMarkerValue(const std::string& line, const std::string& markerName);
     static void ParseSinglePropertyIntoChannel(const std::string& line, iptvsimple::data::Channel& channel, const std::string& markerName);
 
-    std::string ParseIntoChannel(const std::string& line, iptvsimple::data::Channel& channel, data::MediaEntry& mediaEntry, std::vector<int>& groupIdList, int epgTimeShift, int catchupCorrectionSecs, bool xeevCatchup);
+    std::string ParseIntoChannel(const std::string& line, iptvsimple::data::Channel& channel, data::MediaEntry& mediaEntry, int epgTimeShift, int catchupCorrectionSecs, bool xeevCatchup);
     void ParseAndAddChannelGroups(const std::string& groupNamesListString, std::vector<int>& groupIdList, bool isRadio);
 
     std::string m_m3uLocation;
